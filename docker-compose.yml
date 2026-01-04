@@ -1,0 +1,161 @@
+version: '3.9'
+
+services:
+
+  # ============================================================================
+  # DATABASE
+  # ============================================================================
+  postgres:
+    image: postgres:15-alpine
+    container_name: ping61-postgres
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/01-init.sql
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================================================
+  # BACKEND API (FastAPI)
+  # ============================================================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ping61-backend
+    environment:
+      # ✅ CAS Configuration
+      CAS_SERVER_URL: ${CAS_SERVER_URL}
+      CAS_LOGIN_PATH: /cas/login
+      CAS_VALIDATE_PATH: /cas/validate
+      CAS_SERVICE_URL: ${BACKEND_URL}
+      
+      # Database
+      DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
+      
+      # JWT
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      JWT_ALGORITHM: HS256
+      JWT_EXPIRE_MINUTES: 60
+      
+      # Proxmox
+      PROXMOX_HOST: ${PROXMOX_HOST}
+      PROXMOX_USER: ${PROXMOX_USER}
+      PROXMOX_PASSWORD: ${PROXMOX_PASSWORD}
+      
+      # Guacamole
+      GUACAMOLE_HOST: guacamole
+      GUACAMOLE_API_PORT: 8088
+      
+      # Server
+      LOG_LEVEL: INFO
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================================================
+  # FRONTEND (React)
+  # ============================================================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: ping61-frontend
+    environment:
+      # ✅ CAS & API
+      REACT_APP_API_URL: ${BACKEND_URL}
+      REACT_APP_CAS_LOGIN_URL: ${CAS_LOGIN_URL}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend/src:/app/src
+    command: npm start
+
+  # ============================================================================
+  # NGINX (Reverse Proxy + HTTPS)
+  # ============================================================================
+  nginx:
+    image: nginx:alpine
+    container_name: ping61-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl/:/etc/nginx/ssl/:ro
+    depends_on:
+      - backend
+      - frontend
+      - guacamole
+
+  # ============================================================================
+  # APACHE GUACAMOLE
+  # ============================================================================
+  guacamole:
+    image: guacamole/guacamole:latest
+    container_name: ping61-guacamole
+    environment:
+      GUACD_HOSTNAME: guacd
+      GUACD_PORT: 4822
+      MYSQL_HOSTNAME: postgres
+      MYSQL_DATABASE: guacamole
+      MYSQL_USER: ${GUAC_DB_USER}
+      MYSQL_PASSWORD: ${GUAC_DB_PASSWORD}
+    ports:
+      - "8088:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ============================================================================
+  # GUACD (VNC/RDP Encoder)
+  # ============================================================================
+  guacd:
+    image: guacamole/guacd:latest
+    container_name: ping61-guacd
+    ports:
+      - "4822:4822"
+
+  # ============================================================================
+  # CAS MOCK (Développement uniquement) ⭐
+  # ============================================================================
+  cas-mock:
+    build:
+      context: ./cas-mock
+      dockerfile: Dockerfile
+    container_name: ping61-cas-mock
+    environment:
+      MOCK_CAS_PORT: 8080
+    ports:
+      - "8888:8080"
+    volumes:
+      - ./cas-mock:/app
+    command: python app.py
+    # À décommenter en production (remplacer par vrai CAS)
+
+volumes:
+  postgres_data:
+
+networks:
+  default:
+    name: ping61-network
