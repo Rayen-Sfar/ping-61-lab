@@ -18,8 +18,8 @@ router = APIRouter(prefix="/api/auth", tags=["authentication"])
 
 # Initialiser le service CAS
 cas_service = CASService(
-    cas_server_url=settings.CAS_SERVER_URL,
-    service_url=settings.BACKEND_URL
+    cas_server_url=settings.cas_server_url,
+    service_url=settings.cas_service_url
 )
 
 @router.get("/login")

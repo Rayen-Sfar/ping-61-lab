@@ -1,6 +1,26 @@
-version: '3.9'
-
 services:
+
+  # ============================================================================
+  # MYSQL FOR GUACAMOLE
+  # ============================================================================
+  mysql:
+    image: mysql:8.0
+    container_name: ping61-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: guacamole
+      MYSQL_USER: ${GUAC_DB_USER}
+      MYSQL_PASSWORD: ${GUAC_DB_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./scripts/guacamole-init.sql:/docker-entrypoint-initdb.d/01-guacamole-init.sql
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # ============================================================================
   # DATABASE
@@ -60,8 +80,7 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      postgres:
-        condition: service_healthy
+      - postgres
     volumes:
       - ./backend:/app
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
@@ -81,7 +100,7 @@ services:
     container_name: ping61-frontend
     environment:
       # ✅ CAS & API
-      REACT_APP_API_URL: ${BACKEND_URL}
+      REACT_APP_API_URL: http://backend:8000
       REACT_APP_CAS_LOGIN_URL: ${CAS_LOGIN_URL}
     ports:
       - "3000:3000"
@@ -89,6 +108,7 @@ services:
       - backend
     volumes:
       - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
     command: npm start
 
   # ============================================================================
@@ -117,17 +137,15 @@ services:
     environment:
       GUACD_HOSTNAME: guacd
       GUACD_PORT: 4822
-      MYSQL_HOSTNAME: postgres
+      MYSQL_HOSTNAME: mysql
       MYSQL_DATABASE: guacamole
       MYSQL_USER: ${GUAC_DB_USER}
       MYSQL_PASSWORD: ${GUAC_DB_PASSWORD}
     ports:
       - "8088:8080"
     depends_on:
-      postgres:
+      mysql:
         condition: service_healthy
-
-  # ============================================================================
   # GUACD (VNC/RDP Encoder)
   # ============================================================================
   guacd:
@@ -155,6 +173,7 @@ services:
 
 volumes:
   postgres_data:
+  mysql_data:
 
 networks:
   default:
