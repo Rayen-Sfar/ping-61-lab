@@ -34,7 +34,7 @@ const DashboardPage = () => {
     <div className="dashboard">
       <header>
         <div className="header-content">
-          <img src="image1.jpg" alt="Logo" className="logo" />
+          <img src="logo.png" alt="Logo" className="logo" />
           <h1>Dashboard Étudiant</h1>
         </div>
         <button onClick={logout}>Déconnexion</button>
