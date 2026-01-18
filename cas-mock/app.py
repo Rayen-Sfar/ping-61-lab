@@ -1,51 +1,181 @@
- 
-from flask import Flask, request, redirect
+from flask import Flask, request, redirect, render_template_string
 import logging
+import os
+import ldap3
 
 app = Flask(__name__)
 logger = logging.getLogger(__name__)
 
-# Utilisateurs de test
-TEST_USERS = {
-    "student1": {
-        "password": "pass123",
-        "nom": "Dupont",
-        "prenom": "Jean",
-        "email": "student1@school.fr",
-        "groupe": "2-SIO-A"
-    },
-    "teacher1": {
-        "password": "pass123",
-        "nom": "Martin",
-        "prenom": "Marie",
-        "email": "teacher1@school.fr",
-        "groupe": "Teachers"
-    }
-}
+# Configuration LDAP
+LDAP_HOST = os.getenv('LDAP_HOST', 'openldap')
+LDAP_PORT = int(os.getenv('LDAP_PORT', '389'))
+LDAP_BASE_DN = os.getenv('LDAP_BASE_DN', 'dc=esigelec,dc=fr')
+LDAP_ADMIN_DN = os.getenv('LDAP_ADMIN_DN', 'cn=admin,dc=esigelec,dc=fr')
+LDAP_ADMIN_PASSWORD = os.getenv('LDAP_ADMIN_PASSWORD', 'admin')
+
+# Stockage temporaire des tickets
+tickets = {}
+
+def authenticate_ldap(username, password):
+    """Authentifier un utilisateur contre LDAP"""
+    try:
+        server = ldap3.Server(f'ldap://{LDAP_HOST}:{LDAP_PORT}', get_info=ldap3.ALL)
+        
+        # Rechercher l'utilisateur
+        conn = ldap3.Connection(server, LDAP_ADMIN_DN, LDAP_ADMIN_PASSWORD, auto_bind=True)
+        conn.search(
+            search_base=LDAP_BASE_DN,
+            search_filter=f'(uid={username})',
+            attributes=['uid', 'cn', 'sn', 'givenName', 'mail']
+        )
+        
+        if not conn.entries:
+            logger.warning(f"Utilisateur {username} non trouvé dans LDAP")
+            return None
+        
+        entry = conn.entries[0]
+        user_dn = entry.entry_dn
+        
+        # Tenter de se connecter avec les credentials de l'utilisateur
+        user_conn = ldap3.Connection(server, user_dn, password)
+        if not user_conn.bind():
+            logger.warning(f"Mot de passe incorrect pour {username}")
+            return None
+        
+        # Extraire les attributs
+        user_info = {
+            'username': str(entry.uid),
+            'cn': str(entry.cn) if hasattr(entry, 'cn') else username,
+            'sn': str(entry.sn) if hasattr(entry, 'sn') else '',
+            'givenName': str(entry.givenName) if hasattr(entry, 'givenName') else '',
+            'mail': str(entry.mail) if hasattr(entry, 'mail') else f'{username}@esigelec.fr'
+        }
+        
+        logger.info(f"✅ Authentification LDAP réussie pour {username}")
+        return user_info
+        
+    except Exception as e:
+        logger.error(f"❌ Erreur LDAP: {str(e)}")
+        return None
+
+LOGIN_TEMPLATE = """
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CAS Login - ESIGELEC</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .login-box {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            width: 350px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: bold;
+        }
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        input[type="text"]:focus, input[type="password"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+        }
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+            font-size: 12px;
+        }
+        .info strong {
+            display: block;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-box">
+        <h1>🔐 CAS Login</h1>
+        {% if error %}
+        <div class="error">{{ error }}</div>
+        {% endif %}
+        <form method="POST">
+            <div class="form-group">
+                <label for="username">Identifiant</label>
+                <input type="text" id="username" name="username" required autofocus>
+            </div>
+            <div class="form-group">
+                <label for="password">Mot de passe</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            <input type="hidden" name="service" value="{{ service }}">
+            <button type="submit">Se connecter</button>
+        </form>
+        <div class="info">
+            <strong>Comptes de test:</strong>
+            • student1 / password123<br>
+            • teacher1 / password123
+        </div>
+    </div>
+</body>
+</html>
+"""
 
 @app.route('/cas/login', methods=['GET'])
 def cas_login():
     """Affiche le formulaire de login CAS"""
     service = request.args.get('service', '')
-    return f"""
-    <html>
-    <body>
-        <h1>🔐 CAS Mock - Authentification</h1>
-        <form method="POST">
-            <input type="text" name="username" placeholder="Username" required>
-            <input type="password" name="password" placeholder="Password" required>
-            <input type="hidden" name="service" value="{service}">
-            <button type="submit">Login</button>
-        </form>
-        <hr>
-        <p><strong>Comptes de test :</strong></p>
-        <ul>
-            <li>student1 / pass123</li>
-            <li>teacher1 / pass123</li>
-        </ul>
-    </body>
-    </html>
-    """
+    error = request.args.get('error', '')
+    return render_template_string(LOGIN_TEMPLATE, service=service, error=error)
 
 @app.route('/cas/login', methods=['POST'])
 def cas_login_post():
@@ -54,15 +184,23 @@ def cas_login_post():
     password = request.form.get('password')
     service = request.form.get('service')
     
-    # Valider credentials
-    if username not in TEST_USERS or TEST_USERS[username]['password'] != password:
-        return "❌ Identifiants invalides", 401
+    # Authentifier contre LDAP
+    user_info = authenticate_ldap(username, password)
+    
+    if not user_info:
+        return redirect(f'/cas/login?service={service}&error=Identifiants invalides')
     
     # Générer un ticket ST-xxxx
-    ticket = f"ST-{username}-{hash(username)}"
+    import hashlib
+    import time
+    ticket = f"ST-{hashlib.md5(f'{username}{time.time()}'.encode()).hexdigest()[:16]}"
+    
+    # Stocker le ticket avec les infos utilisateur
+    tickets[ticket] = user_info
     
     # Rediriger vers le service avec le ticket
-    return redirect(f"{service}?ticket={ticket}")
+    separator = '&' if '?' in service else '?'
+    return redirect(f"{service}{separator}ticket={ticket}")
 
 @app.route('/cas/validate', methods=['GET'])
 def cas_validate():
@@ -79,34 +217,58 @@ def cas_validate():
         </cas:serviceResponse>
         """
     
-    # Extraire username du ticket
-    username = ticket.split('-')[1]
+    # Vérifier le ticket
+    user_info = tickets.get(ticket)
     
-    if username not in TEST_USERS:
+    if not user_info:
         return """<?xml version="1.0" encoding="UTF-8"?>
         <cas:serviceResponse xmlns:cas="http://www.yale.edu/tp/cas">
             <cas:authenticationFailure code="INVALID_TICKET">
-                Ticket invalide
+                Ticket invalide ou expiré
             </cas:authenticationFailure>
         </cas:serviceResponse>
         """
     
-    user_info = TEST_USERS[username]
+    # Supprimer le ticket (usage unique)
+    del tickets[ticket]
     
-    # ✅ Retourner l'utilisateur avec attributs
+    # Retourner l'utilisateur avec attributs
     return f"""<?xml version="1.0" encoding="UTF-8"?>
     <cas:serviceResponse xmlns:cas="http://www.yale.edu/tp/cas">
         <cas:authenticationSuccess>
-            <cas:user>{username}</cas:user>
+            <cas:user>{user_info['username']}</cas:user>
             <cas:attributes>
-                <cas:email>{user_info['email']}</cas:email>
-                <cas:nom>{user_info['nom']}</cas:nom>
-                <cas:prenom>{user_info['prenom']}</cas:prenom>
-                <cas:groupe>{user_info['groupe']}</cas:groupe>
+                <cas:email>{user_info['mail']}</cas:email>
+                <cas:nom>{user_info['sn']}</cas:nom>
+                <cas:prenom>{user_info['givenName']}</cas:prenom>
+                <cas:cn>{user_info['cn']}</cas:cn>
             </cas:attributes>
         </cas:authenticationSuccess>
     </cas:serviceResponse>
     """
 
+@app.route('/health')
+def health():
+    return {'status': 'ok', 'service': 'CAS Mock with LDAP'}
+
+@app.route('/ldap/authenticate', methods=['POST'])
+def ldap_authenticate():
+    """Endpoint pour authentification LDAP directe (sans ticket CAS)"""
+    data = request.get_json()
+    username = data.get('username')
+    password = data.get('password')
+    
+    if not username or not password:
+        return {'error': 'Username and password required'}, 400
+    
+    # Authentifier contre LDAP
+    user_info = authenticate_ldap(username, password)
+    
+    if not user_info:
+        return {'error': 'Invalid credentials'}, 401
+    
+    return user_info, 200
+
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.INFO)
     app.run(host='0.0.0.0', port=8080, debug=True)

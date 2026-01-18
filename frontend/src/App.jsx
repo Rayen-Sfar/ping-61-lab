@@ -6,6 +6,7 @@ import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import LabPage from './pages/LabPage';
 import AdminPage from './pages/AdminPage';
+import CallbackPage from './pages/CallbackPage';
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/lab/:tpId" element={<LabPage />} />
             <Route path="/admin" element={<AdminPage />} />
+            <Route path="/api/auth/callback" element={<CallbackPage />} />
           </Routes>
         </div>
       </Router>

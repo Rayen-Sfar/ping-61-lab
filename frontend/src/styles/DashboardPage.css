@@ -1,0 +1,375 @@
+/* Dashboard Page */
+.dashboard-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+}
+
+/* Header */
+.dashboard-header {
+  background: linear-gradient(135deg, #2d5f4f 0%, #1f4035 100%);
+  color: white;
+  padding: 2rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  margin-bottom: 2rem;
+}
+
+.header-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.header-left h1 {
+  margin: 0;
+  font-size: 2.2rem;
+  font-weight: 700;
+}
+
+.subtitle {
+  margin: 0.5rem 0 0 0;
+  font-size: 14px;
+  opacity: 0.9;
+  font-weight: 500;
+}
+
+.header-actions {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.btn-admin {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 2px solid white;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.btn-admin:hover {
+  background-color: white;
+  color: #2d5f4f;
+}
+
+.btn-logout {
+  background-color: #dc2626;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background-color 0.3s ease;
+}
+
+.btn-logout:hover {
+  background-color: #b91c1c;
+}
+
+/* Container */
+.dashboard-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem 2rem;
+}
+
+/* Alert */
+.alert {
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  border-radius: 8px;
+  font-weight: 500;
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.alert-error {
+  background-color: #fee2e2;
+  color: #991b1b;
+  border-left: 4px solid #ef4444;
+}
+
+/* Loading State */
+.loading-container {
+  text-align: center;
+  padding: 4rem 2rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid #e5e7eb;
+  border-top-color: #2d5f4f;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 1rem;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-container p {
+  color: #6b7280;
+  margin: 0;
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.empty-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+.empty-state h2 {
+  color: #1f2937;
+  margin: 0 0 0.5rem 0;
+}
+
+.empty-state p {
+  color: #6b7280;
+  margin: 0 0 1.5rem 0;
+}
+
+/* TPs Container */
+.tps-container {
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.tps-container h2 {
+  color: #1f2937;
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  font-size: 1.5rem;
+  border-bottom: 2px solid #e5e7eb;
+  padding-bottom: 1rem;
+}
+
+/* TPs Grid */
+.tps-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.5rem;
+}
+
+.tp-card-dashboard {
+  background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%);
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 1.5rem;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.tp-card-dashboard:hover {
+  border-color: #2d5f4f;
+  box-shadow: 0 12px 24px rgba(45, 95, 79, 0.2);
+  transform: translateY(-6px);
+}
+
+.tp-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.tp-card-header h3 {
+  margin: 0;
+  color: #1f2937;
+  font-size: 18px;
+  flex: 1;
+  line-height: 1.4;
+}
+
+.difficulty-badge {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.difficulty-badge.facile {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.difficulty-badge.moyen {
+  background-color: #fef08a;
+  color: #78350f;
+}
+
+.difficulty-badge.difficile {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.tp-description {
+  color: #6b7280;
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0 0 1.5rem 0;
+  flex: 1;
+}
+
+.tp-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.info-item {
+  display: flex;
+  gap: 0.5rem;
+  font-size: 13px;
+}
+
+.info-label {
+  color: #6b7280;
+  font-weight: 600;
+  min-width: 80px;
+}
+
+.info-value {
+  color: #374151;
+  font-weight: 500;
+}
+
+.btn-start-tp {
+  background-color: #2d5f4f;
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: auto;
+}
+
+.btn-start-tp:hover {
+  background-color: #1f4035;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(45, 95, 79, 0.3);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .dashboard-header {
+    padding: 1.5rem;
+  }
+
+  .header-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .dashboard-header h1 {
+    font-size: 1.5rem;
+  }
+
+  .header-actions {
+    width: 100%;
+  }
+
+  .dashboard-container {
+    padding: 0 0.5rem 1rem;
+  }
+
+  .tps-container {
+    padding: 1.5rem;
+  }
+
+  .tps-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tp-card-header {
+    flex-direction: column;
+  }
+
+  .btn-admin,
+  .btn-logout {
+    flex: 1;
+    min-width: 100px;
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard-header {
+    padding: 1rem;
+  }
+
+  .header-left h1 {
+    font-size: 1.3rem;
+  }
+
+  .subtitle {
+    font-size: 12px;
+  }
+
+  .btn-admin,
+  .btn-logout {
+    padding: 8px 16px;
+    font-size: 12px;
+  }
+
+  .tp-card-dashboard {
+    padding: 1rem;
+  }
+
+  .tp-card-header h3 {
+    font-size: 16px;
+  }
+
+  .difficulty-badge {
+    padding: 4px 8px;
+    font-size: 10px;
+  }
+}

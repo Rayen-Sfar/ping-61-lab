@@ -1,0 +1,16 @@
+{
+  "@class": "org.apereo.cas.services.CasRegisteredService",
+  "serviceId": "^http://localhost:(3000|3001|8000).*",
+  "name": "Lab on Demand",
+  "id": 1,
+  "description": "Plateforme de Travaux Pratiques ESIGELEC",
+  "evaluationOrder": 1,
+  "attributeReleasePolicy": {
+    "@class": "org.apereo.cas.services.ReturnAllAttributeReleasePolicy"
+  },
+  "accessStrategy": {
+    "@class": "org.apereo.cas.services.DefaultRegisteredServiceAccessStrategy",
+    "enabled": true,
+    "ssoEnabled": true
+  }
+}

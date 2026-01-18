@@ -53,10 +53,9 @@ services:
     container_name: ping61-backend
     environment:
       # ✅ CAS Configuration
-      CAS_SERVER_URL: ${CAS_SERVER_URL}
-      CAS_LOGIN_PATH: /cas/login
-      CAS_VALIDATE_PATH: /cas/validate
-      CAS_SERVICE_URL: ${BACKEND_URL}
+      CAS_SERVER_URL: http://cas:8080
+      CAS_SERVER_URL_PUBLIC: http://localhost:8888
+      CAS_SERVICE_URL: http://localhost:3000
       
       # Database
       DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
@@ -81,14 +80,10 @@ services:
       - "8000:8000"
     depends_on:
       - postgres
+      - cas
     volumes:
       - ./backend:/app
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
   # ============================================================================
   # FRONTEND (React)
@@ -146,6 +141,8 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+      guacd:
+        condition: service_started
   # GUACD (VNC/RDP Encoder)
   # ============================================================================
   guacd:
@@ -155,25 +152,72 @@ services:
       - "4822:4822"
 
   # ============================================================================
-  # CAS MOCK (Développement uniquement) ⭐
+  # LDAP SERVER
   # ============================================================================
-  cas-mock:
+  openldap:
+    image: osixia/openldap:1.5.0
+    container_name: ping61-openldap
+    environment:
+      LDAP_ORGANISATION: "ESIGELEC"
+      LDAP_DOMAIN: "esigelec.fr"
+      LDAP_ADMIN_PASSWORD: "admin"
+      LDAP_CONFIG_PASSWORD: "config"
+    ports:
+      - "389:389"
+      - "636:636"
+    volumes:
+      - ldap_data:/var/lib/ldap
+      - ldap_config:/etc/ldap/slapd.d
+    healthcheck:
+      test: ["CMD", "ldapsearch", "-x", "-H", "ldap://localhost", "-b", "dc=esigelec,dc=fr", "-D", "cn=admin,dc=esigelec,dc=fr", "-w", "admin"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================================================
+  # LDAP ACCOUNT MANAGER (Interface Web pour gérer LDAP)
+  # ============================================================================
+  lam:
+    image: ldapaccountmanager/lam:latest
+    container_name: ping61-lam
+    depends_on:
+      openldap:
+        condition: service_healthy
+    ports:
+      - "8081:80"
+    environment:
+      LDAP_SERVER: "ldap://openldap:389"
+      LDAP_DOMAIN: "dc=esigelec,dc=fr"
+      LDAP_BASE_DN: "dc=esigelec,dc=fr"
+
+  # ============================================================================
+  # CAS SERVER SIMPLE (Mock pour développement)
+  # ============================================================================
+  cas:
     build:
       context: ./cas-mock
       dockerfile: Dockerfile
-    container_name: ping61-cas-mock
-    environment:
-      MOCK_CAS_PORT: 8080
+    container_name: ping61-cas
+    depends_on:
+      openldap:
+        condition: service_healthy
     ports:
       - "8888:8080"
+    environment:
+      LDAP_HOST: openldap
+      LDAP_PORT: 389
+      LDAP_BASE_DN: dc=esigelec,dc=fr
+      LDAP_ADMIN_DN: cn=admin,dc=esigelec,dc=fr
+      LDAP_ADMIN_PASSWORD: admin
     volumes:
       - ./cas-mock:/app
     command: python app.py
-    # À décommenter en production (remplacer par vrai CAS)
 
 volumes:
   postgres_data:
   mysql_data:
+  ldap_data:
+  ldap_config:
 
 networks:
   default:

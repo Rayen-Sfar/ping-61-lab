@@ -1,0 +1,13 @@
+dn: uid=teacher1,ou=users,dc=esigelec,dc=fr
+objectClass: inetOrgPerson
+objectClass: posixAccount
+objectClass: shadowAccount
+uid: teacher1
+cn: Marie Martin
+sn: Martin
+givenName: Marie
+mail: marie.martin@esigelec.fr
+uidNumber: 10002
+gidNumber: 10002
+homeDirectory: /home/teacher1
+userPassword: password123

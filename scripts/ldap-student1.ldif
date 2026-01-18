@@ -1,0 +1,13 @@
+dn: uid=student1,ou=users,dc=esigelec,dc=fr
+objectClass: inetOrgPerson
+objectClass: posixAccount
+objectClass: shadowAccount
+uid: student1
+cn: Jean Dupont
+sn: Dupont
+givenName: Jean
+mail: jean.dupont@esigelec.fr
+uidNumber: 10001
+gidNumber: 10001
+homeDirectory: /home/student1
+userPassword: password123
