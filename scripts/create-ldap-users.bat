@@ -12,8 +12,19 @@ docker exec -i ping61-openldap ldapadd -x -D "cn=admin,dc=esigelec,dc=fr" -w adm
 echo [2/3] Creation de l'etudiant student1...
 docker exec -i ping61-openldap ldapadd -x -D "cn=admin,dc=esigelec,dc=fr" -w admin < ldap-student1.ldif
 
-echo [3/3] Creation de l'enseignant teacher1...
+echo [3/5] Creation de l'enseignant teacher1...
 docker exec -i ping61-openldap ldapadd -x -D "cn=admin,dc=esigelec,dc=fr" -w admin < ldap-teacher1.ldif
+
+echo [4/5] Creation de l'utilisateur rayen (enseignant)...
+docker cp ldap-rayen.ldif ping61-openldap:/tmp/ldap-rayen.ldif
+docker exec -i ping61-openldap ldapadd -x -D "cn=admin,dc=esigelec,dc=fr" -w admin -f /tmp/ldap-rayen.ldif
+
+echo [5/5] Creation des groupes (teachers, students)...
+docker exec -i ping61-openldap ldapadd -x -D "cn=admin,dc=esigelec,dc=fr" -w admin < ldap-groups.ldif
+
+echo Ajout de rayen au groupe teachers...
+docker cp ldap-add-rayen-to-teachers.ldif ping61-openldap:/tmp/ldap-add-rayen-to-teachers.ldif
+docker exec -i ping61-openldap ldapmodify -x -D "cn=admin,dc=esigelec,dc=fr" -w admin -f /tmp/ldap-add-rayen-to-teachers.ldif
 
 echo.
 echo ========================================

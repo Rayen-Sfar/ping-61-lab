@@ -1,0 +1,13 @@
+dn: uid=rayen,ou=users,dc=esigelec,dc=fr
+objectClass: inetOrgPerson
+objectClass: posixAccount
+objectClass: shadowAccount
+uid: rayen
+cn: Rayen Sfar
+sn: Sfar
+givenName: Rayen
+mail: rayen.sfar@esigelec.fr
+uidNumber: 10003
+gidNumber: 10002
+homeDirectory: /home/rayen
+userPassword: {SSHA}password123

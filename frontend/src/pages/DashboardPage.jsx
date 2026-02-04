@@ -13,41 +13,15 @@ const DashboardPage = () => {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    // Vérifier si on arrive avec des paramètres d'authentification CAS
-    const token = searchParams.get('token');
-    const userId = searchParams.get('user_id');
-    const username = searchParams.get('username');
-    const role = searchParams.get('role');
-    const authError = searchParams.get('error');
-
-    // Si erreur d'authentification, rediriger vers login
-    if (authError === 'auth_failed') {
-      navigate('/?error=Authentification échouée', { replace: true });
-      return;
-    }
-
-    if (token && userId && username && role) {
-      // Stocker les informations d'authentification
-      localStorage.setItem('token', token);
-      localStorage.setItem('user_id', userId);
-      localStorage.setItem('username', username);
-      localStorage.setItem('role', role);
-
-      // Mettre à jour le contexte
-      setToken(token);
-      setUser({ id: userId, username, role });
-
-      // Nettoyer l'URL
-      navigate('/dashboard', { replace: true });
-      return;
-    }
-
+    // Si pas d'utilisateur, rediriger vers login
     if (!user) {
       navigate('/');
       return;
     }
+    
+    console.log('👤 User authentifié:', user.username);
     fetchTPs();
-  }, [user, navigate, searchParams, setUser, setToken]);
+  }, [user, navigate]);
 
   const fetchTPs = async () => {
     try {
@@ -81,9 +55,12 @@ const DashboardPage = () => {
             <p className="subtitle">Bienvenue {user?.username}</p>
           </div>
           <div className="header-actions">
-            <button onClick={goToAdminPage} className="btn-admin">
-              🏫 Espace Enseignant
-            </button>
+            {/* Montrer le bouton admin seulement si rôle enseignant/admin */}
+            {['teacher', 'admin'].includes((user?.role || '').toString().toLowerCase()) && (
+              <button onClick={goToAdminPage} className="btn-admin">
+                🏫 Espace Enseignant
+              </button>
+            )}
             <button onClick={logout} className="btn-logout">
               Déconnexion
             </button>

@@ -47,6 +47,61 @@ homeDirectory: /home/teacher1
 userPassword: {SSHA}password123
 EOF
 
+# Créer l'unite pour les groupes et deux groupes simples (teachers/admin, students)
+docker exec ping61-openldap ldapadd -x -D "cn=admin,dc=esigelec,dc=fr" -w admin << EOF
+dn: ou=groups,dc=esigelec,dc=fr
+objectClass: organizationalUnit
+ou: groups
+EOF
+
+# Groupe teachers (admin)
+docker exec ping61-openldap ldapadd -x -D "cn=admin,dc=esigelec,dc=fr" -w admin << EOF
+dn: cn=teachers,ou=groups,dc=esigelec,dc=fr
+objectClass: groupOfNames
+cn: teachers
+member: uid=teacher1,ou=users,dc=esigelec,dc=fr
+EOF
+
+# Groupe students
+docker exec ping61-openldap ldapadd -x -D "cn=admin,dc=esigelec,dc=fr" -w admin << EOF
+dn: cn=students,ou=groups,dc=esigelec,dc=fr
+objectClass: groupOfNames
+cn: students
+member: uid=student1,ou=users,dc=esigelec,dc=fr
+EOF
+
+# --- Nouveau: Ajouter l'utilisateur Rayen (enseignant/admin) ---
+# Créer l'utilisateur Rayen
+if [ -f "scripts/ldap-rayen.ldif" ]; then
+  docker exec ping61-openldap ldapadd -x -D "cn=admin,dc=esigelec,dc=fr" -w admin -f /tmp/ldap-rayen.ldif || \
+  docker exec ping61-openldap ldapadd -x -D "cn=admin,dc=esigelec,dc=fr" -w admin << EOF
+dn: uid=rayen,ou=users,dc=esigelec,dc=fr
+objectClass: inetOrgPerson
+objectClass: posixAccount
+objectClass: shadowAccount
+uid: rayen
+cn: Rayen Sfar
+sn: Sfar
+givenName: Rayen
+mail: rayen.sfar@esigelec.fr
+uidNumber: 10003
+gidNumber: 10002
+homeDirectory: /home/rayen
+userPassword: {SSHA}password123
+EOF
+fi
+
+# Ajouter Rayen au groupe teachers
+if [ -f "scripts/ldap-add-rayen-to-teachers.ldif" ]; then
+  docker exec ping61-openldap ldapmodify -x -D "cn=admin,dc=esigelec,dc=fr" -w admin -f /tmp/ldap-add-rayen-to-teachers.ldif || \
+  docker exec ping61-openldap ldapmodify -x -D "cn=admin,dc=esigelec,dc=fr" -w admin << EOF
+dn: cn=teachers,ou=groups,dc=esigelec,dc=fr
+changetype: modify
+add: member
+member: uid=rayen,ou=users,dc=esigelec,dc=fr
+EOF
+fi
+
 echo "✅ Utilisateurs LDAP créés avec succès!"
 echo ""
 echo "📋 Comptes disponibles:"

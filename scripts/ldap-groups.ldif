@@ -1,0 +1,15 @@
+dn: ou=groups,dc=esigelec,dc=fr
+objectClass: organizationalUnit
+ou: groups
+
+# Groupe des enseignants (admin)
+dn: cn=teachers,ou=groups,dc=esigelec,dc=fr
+objectClass: groupOfNames
+cn: teachers
+member: uid=teacher1,ou=users,dc=esigelec,dc=fr
+
+# Groupe des etudiants
+dn: cn=students,ou=groups,dc=esigelec,dc=fr
+objectClass: groupOfNames
+cn: students
+member: uid=student1,ou=users,dc=esigelec,dc=fr

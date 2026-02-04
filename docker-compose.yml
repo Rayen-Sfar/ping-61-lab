@@ -71,8 +71,12 @@ services:
       PROXMOX_PASSWORD: ${PROXMOX_PASSWORD}
       
       # Guacamole
-      GUACAMOLE_HOST: guacamole
-      GUACAMOLE_API_PORT: 8088
+      GUACAMOLE_API_URL: http://guacamole:8080/guacamole
+      # Public URL accessible by browser/host (maps container 8080 -> host 8088)
+      # Changez cette adresse si votre hôte Guacamole est sur une IP différente
+      GUACAMOLE_PUBLIC_URL: http://10.3.0.76:8080/guacamole
+      GUACAMOLE_ADMIN_USERNAME: guacadmin
+      GUACAMOLE_ADMIN_PASSWORD: guacadmin
       
       # Server
       LOG_LEVEL: INFO
@@ -97,6 +101,7 @@ services:
       # ✅ CAS & API
       REACT_APP_API_URL: http://backend:8000
       REACT_APP_CAS_LOGIN_URL: ${CAS_LOGIN_URL}
+      REACT_APP_GUAC_BASE: ${GUACAMOLE_PUBLIC_URL}
     ports:
       - "3000:3000"
     depends_on:

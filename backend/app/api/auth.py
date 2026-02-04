@@ -65,33 +65,53 @@ async def ldap_login(
     result = await db.execute(stmt)
     user = result.scalar_one_or_none()
     
+    # Déterminer rôle à partir des groupes LDAP si fournis
+    def determine_role_from_groups(groups):
+        if not groups:
+            return "student"
+        admin_groups = [g.strip().lower() for g in settings.admin_groups.split(',') if g.strip()]
+        for g in groups:
+            if str(g).strip().lower() in admin_groups:
+                return "admin"
+        return "student"
+
+    groups = user_data.get('groups') or []
+    role_from_groups = determine_role_from_groups(groups)
+
     if not user:
-        logger.info(f"✅ Nouvel utilisateur créé : {request.username}")
+        logger.info(f"✅ Nouvel utilisateur créé : {request.username} (role={role_from_groups})")
         user = User(
             cas_id=request.username,
             email=user_data.get("mail", f"{request.username}@esigelec.fr"),
             first_name=user_data.get("givenName", ""),
             last_name=user_data.get("sn", ""),
-            role="student",
+            role=role_from_groups,
             auth_provider="ldap",
             is_active=True
         )
         db.add(user)
         await db.commit()
         await db.refresh(user)
-    
+    else:
+        # Mettre à jour le rôle si nécessaire (par ex. changement d'appartenance à un groupe)
+        if user.role != role_from_groups:
+            logger.info(f"🔄 Mise à jour rôle pour {request.username}: {user.role} -> {role_from_groups}")
+            user.role = role_from_groups
+            await db.commit()
+            await db.refresh(user)
+
     # Mettre à jour last_login
     user.last_login = datetime.utcnow()
     await db.commit()
-    
+
     # Générer JWT
     access_token = create_access_token(
         data={"sub": str(user.id), "role": user.role},
-        expires_delta=timedelta(minutes=settings.JWT_EXPIRE_MINUTES)
+        expires_delta=timedelta(minutes=settings.jwt_expire_minutes)
     )
-    
+
     logger.info(f"✅ JWT généré pour {request.username}")
-    
+
     return LoginResponse(
         access_token=access_token,
         token_type="bearer",
@@ -146,54 +166,68 @@ async def cas_callback(
     result = await db.execute(stmt)
     user = result.scalar_one_or_none()
     
+    # Déterminer rôle à partir des attributs CAS (ex: 'groupe' ou 'groups')
+    def determine_role_from_groups(groups):
+        if not groups:
+            return "student"
+        admin_groups = [g.strip().lower() for g in settings.admin_groups.split(',') if g.strip()]
+        for g in groups:
+            if str(g).strip().lower() in admin_groups:
+                return "admin"
+        return "student"
+
+    # Les attributs CAS peuvent contenir 'groupe' (string) ou 'groups' (csv)
+    groups = []
+    if 'groupe' in attributes and attributes.get('groupe'):
+        groups = [attributes.get('groupe')]
+    elif 'groups' in attributes and attributes.get('groups'):
+        groups = [g.strip() for g in str(attributes.get('groups')).split(',') if g.strip()]
+
+    role_from_groups = determine_role_from_groups(groups)
+
     if not user:
         # ✅ Créer un nouvel utilisateur
-        logger.info(f"✅ Nouvel utilisateur créé : {username}")
+        logger.info(f"✅ Nouvel utilisateur créé : {username} (role={role_from_groups})")
         user = User(
             cas_id=username,
             email=attributes.get("email", f"{username}@school.fr"),
             first_name=attributes.get("prenom", ""),
             last_name=attributes.get("nom", ""),
-            role="student",  # Rôle par défaut
+            role=role_from_groups,  # Rôle déduit
             auth_provider="cas",
             is_active=True
         )
         db.add(user)
         await db.commit()
         await db.refresh(user)
-    
+    else:
+        # Mettre à jour le rôle si nécessaire
+        if user.role != role_from_groups:
+            logger.info(f"🔄 Mise à jour rôle pour {username}: {user.role} -> {role_from_groups}")
+            user.role = role_from_groups
+            await db.commit()
+            await db.refresh(user)
+
     # Mettre à jour last_login
     user.last_login = datetime.utcnow()
     await db.commit()
-    
+
     # Générer JWT
     access_token = create_access_token(
         data={"sub": str(user.id), "role": user.role},
-        expires_delta=timedelta(minutes=settings.JWT_EXPIRE_MINUTES)
+        expires_delta=timedelta(minutes=settings.jwt_expire_minutes)
     )
-    
+
     logger.info(f"✅ JWT généré pour {username}")
-    
-    # Rediriger vers le frontend avec le token
-    from fastapi.responses import RedirectResponse
-    from urllib.parse import urlencode
-    
-    # Paramètres à passer au frontend
-    params = {
-        'token': access_token,
-        'user_id': str(user.id),
-        'username': user.cas_id,
-        'role': user.role
-    }
-    
-    # Déterminer la page de redirection selon le rôle
-    if user.role in ['teacher', 'admin']:
-        redirect_url = f"{settings.cas_service_url}/admin?{urlencode(params)}"
-    else:
-        redirect_url = f"{settings.cas_service_url}/dashboard?{urlencode(params)}"
-    
-    logger.info(f"✅ Redirection vers: {redirect_url}")
-    return RedirectResponse(url=redirect_url)
+
+    # Retourner le token en JSON (pas de redirection)
+    return LoginResponse(
+        access_token=access_token,
+        token_type="bearer",
+        user_id=str(user.id),
+        username=user.cas_id,
+        role=user.role
+    )
 
 @router.get("/me", response_model=UserSchema)
 async def get_current_user(

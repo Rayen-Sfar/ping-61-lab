@@ -100,6 +100,7 @@ const AdminPage = () => {
           <h1>🏫 Espace Enseignant - Gestion des TPs</h1>
           <div className="header-actions">
             <span className="welcome-text">Bienvenue, {user?.username}</span>
+            <button onClick={() => navigate('/dashboard')} className="btn-secondary">Dashboard</button>
             <button onClick={logout} className="btn-logout">Déconnexion</button>
           </div>
         </div>

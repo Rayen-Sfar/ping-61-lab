@@ -1,0 +1,4 @@
+dn: cn=teachers,ou=groups,dc=esigelec,dc=fr
+changetype: modify
+add: member
+member: uid=rayen,ou=users,dc=esigelec,dc=fr

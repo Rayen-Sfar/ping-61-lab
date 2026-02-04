@@ -50,8 +50,42 @@ def authenticate_ldap(username, password):
             'givenName': str(entry.givenName) if hasattr(entry, 'givenName') else '',
             'mail': str(entry.mail) if hasattr(entry, 'mail') else f'{username}@esigelec.fr'
         }
-        
-        logger.info(f"✅ Authentification LDAP réussie pour {username}")
+
+        # Chercher les groupes (groupOfNames, posixGroup)
+        groups = []
+        try:
+            # groupOfNames : member = user DN
+            conn.search(
+                search_base=LDAP_BASE_DN,
+                search_filter=f'(member={user_dn})',
+                attributes=['cn']
+            )
+            for g in conn.entries:
+                if hasattr(g, 'cn'):
+                    groups.append(str(g.cn))
+        except Exception:
+            pass
+
+        try:
+            # posixGroup : memberUid = username
+            conn.search(
+                search_base=LDAP_BASE_DN,
+                search_filter=f'(objectClass=posixGroup)',
+                attributes=['cn', 'memberUid']
+            )
+            for g in conn.entries:
+                if hasattr(g, 'memberUid') and str(username) in str(g.memberUid):
+                    if hasattr(g, 'cn'):
+                        groups.append(str(g.cn))
+        except Exception:
+            pass
+
+        # Déduire un attribut 'groups' pour la réponse
+        if groups:
+            # dédupliquer
+            user_info['groups'] = sorted(list(set(groups)))
+
+        logger.info(f"✅ Authentification LDAP réussie pour {username} - groups={user_info.get('groups')}")
         return user_info
         
     except Exception as e:
@@ -231,8 +265,13 @@ def cas_validate():
     
     # Supprimer le ticket (usage unique)
     del tickets[ticket]
-    
-    # Retourner l'utilisateur avec attributs
+
+    # Préparer un éventuel champ 'groups' (CSV) si présent
+    groups_xml = ''
+    if 'groups' in user_info and user_info['groups']:
+        groups_xml = f"\n                <cas:groups>{','.join(user_info['groups'])}</cas:groups>"
+
+    # Retourner l'utilisateur avec attributs (ajoute <cas:groups> si disponible)
     return f"""<?xml version="1.0" encoding="UTF-8"?>
     <cas:serviceResponse xmlns:cas="http://www.yale.edu/tp/cas">
         <cas:authenticationSuccess>
@@ -241,7 +280,7 @@ def cas_validate():
                 <cas:email>{user_info['mail']}</cas:email>
                 <cas:nom>{user_info['sn']}</cas:nom>
                 <cas:prenom>{user_info['givenName']}</cas:prenom>
-                <cas:cn>{user_info['cn']}</cas:cn>
+                <cas:cn>{user_info['cn']}</cas:cn>{groups_xml}
             </cas:attributes>
         </cas:authenticationSuccess>
     </cas:serviceResponse>

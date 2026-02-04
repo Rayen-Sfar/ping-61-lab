@@ -6,10 +6,31 @@ import '../styles/LoginPage.css';
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { setUser, setToken } = useAuth();
+  const { user, setUser, setToken } = useAuth();
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Si l'utilisateur est déjà connecté, rediriger selon son rôle
+  // MAIS si un ticket CAS est présent, laisser le handler du ticket décider de la redirection
+  const ticketParam = searchParams.get('ticket');
+  useEffect(() => {
+    if (!user) return;
+    if (ticketParam) return; // Eviter d'interrompre le flux CAS en cours
+
+    const role = (user.role || '').toString().toLowerCase();
+    if (role === 'teacher' || role === 'admin') {
+      navigate('/admin');
+    } else {
+      navigate('/dashboard');
+    }
+  }, [user, navigate, ticketParam]);
+
+  // Persist redirect target (if any) so it survives CAS external redirect
+  const redirectParam = searchParams.get('redirect');
+  if (redirectParam) {
+    sessionStorage.setItem('redirect_after_login', redirectParam);
+  }
 
   useEffect(() => {
     // Vérifier si on revient de CAS avec un ticket
@@ -20,13 +41,37 @@ export default function LoginPage() {
   }, [searchParams]);
 
   const handleCASCallback = async (ticket) => {
+    // Éviter de traiter le même ticket plusieurs fois (React StrictMode peut double-invoquer)
+    if (sessionStorage.getItem(`ticket_${ticket}`)) {
+      console.warn('Ticket déjà traité:', ticket);
+      return;
+    }
+    sessionStorage.setItem(`ticket_${ticket}`, '1');
+
     setLoading(true);
     setError('');
     
     try {
-      const response = await API.get(`/api/auth/callback?ticket=${ticket}`);
+      // Ne pas lever d'exception sur redirect 3xx ici - nous allons vérifier le contenu
+      const response = await API.get(`/auth/callback?ticket=${ticket}`, { validateStatus: null });
+
+      // Vérifier que le backend a retourné un access_token valide
+      if (response.status !== 200 || !response.data || !response.data.access_token) {
+        console.error('CAS callback failed:', response.status, response.data);
+        setError('Échec de l\'authentification CAS (ticket invalide ou expiré). Veuillez réessayer.');
+        setLoading(false);
+        return;
+      }
+
       const { access_token, user_id, username, role } = response.data;
-      
+
+      // Sécurité : ne pas stocker des valeurs indéfinies
+      if (!access_token) {
+        setError('Échec de l\'authentification CAS. Jeton manquant.');
+        setLoading(false);
+        return;
+      }
+
       // Stocker dans localStorage
       localStorage.setItem('token', access_token);
       localStorage.setItem('user_id', user_id);
@@ -37,8 +82,12 @@ export default function LoginPage() {
       setToken(access_token);
       setUser({ id: user_id, role, username });
       
-      // Rediriger selon le rôle
-      if (role === 'teacher' || role === 'admin') {
+      // Rediriger selon le redirect stocké (si présent) ou selon le rôle
+      const redirectAfterLogin = sessionStorage.getItem('redirect_after_login');
+      if (redirectAfterLogin) {
+        sessionStorage.removeItem('redirect_after_login');
+        navigate(redirectAfterLogin);
+      } else if (role === 'teacher' || role === 'admin') {
         navigate('/admin');
       } else {
         navigate('/dashboard');
@@ -56,7 +105,7 @@ export default function LoginPage() {
     
     try {
       // Récupérer l'URL de redirection CAS
-      const response = await API.get('/api/auth/login');
+      const response = await API.get('/auth/login');
       const { redirect_url } = response.data;
       
       // Rediriger vers CAS

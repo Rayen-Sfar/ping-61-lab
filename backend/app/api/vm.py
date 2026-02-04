@@ -4,7 +4,7 @@ from ..db.database import get_db
 import asyncio
 import logging
 
-router = APIRouter()
+router = APIRouter(prefix="/vm", tags=["vm"])
 
 logger = logging.getLogger(__name__)
 
