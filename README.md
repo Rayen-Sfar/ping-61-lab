@@ -16,7 +16,7 @@
 ##  Architecture
 
 ```
-<img width="4817" height="2905" alt="image1" src="https://github.com/user-attachments/assets/95988098-7d20-4291-92af-50508062ae5c" />
+<img width="1483" height="892" alt="image" src="https://github.com/user-attachments/assets/194fb45a-a823-4630-9c7f-405ec0aae511" />
 
 ```
 
@@ -213,5 +213,6 @@ Consultez les fichiers dans le dossier `docs/` pour plus de détails:
 
 **Dernière mise à jour**: 16 janvier 2026
 # last-version
+
 
 
