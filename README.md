@@ -16,7 +16,8 @@
 ##  Architecture
 
 ```
-<img width="4817" height="2905" alt="Mermaid Chart - Create complex, visual diagrams with text -2026-02-12-233839" src="https://github.com/user-attachments/assets/a66553ed-7f57-464e-a203-c2f257b406a6" />
+<img width="4817" height="2905" alt="image1" src="https://github.com/user-attachments/assets/95988098-7d20-4291-92af-50508062ae5c" />
+
 ```
 
 ## 📦 Technologies utilisées
@@ -212,4 +213,5 @@ Consultez les fichiers dans le dossier `docs/` pour plus de détails:
 
 **Dernière mise à jour**: 16 janvier 2026
 # last-version
+
 
