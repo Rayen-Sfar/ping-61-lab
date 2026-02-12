@@ -38,8 +38,6 @@
 │  ├─ tps (travaux pratiques)                            │
 │  └─ logs (historique)                                  │
 └─────────────────────────────────────────────────────────┘
-<img width="1483" height="892" alt="image" src="https://github.com/user-attachments/assets/194fb45a-a823-4630-9c7f-405ec0aae511" />
-<img width="1115" height="571" alt="image" src="https://github.com/user-attachments/assets/733e9ce4-8cc6-46ba-903a-aa894e1155f6" />
 
 ```
 
@@ -236,6 +234,7 @@ Consultez les fichiers dans le dossier `docs/` pour plus de détails:
 
 **Dernière mise à jour**: 16 janvier 2026
 # last-version
+
 
 
 
