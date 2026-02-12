@@ -1,5 +1,5 @@
 ﻿# 🚀 Lab on Demand - Plateforme de Travaux Pratiques
-
+## les étapes de tout le démarche de developement de l'application dans le fichier guide_tuterial.md
 ##  Vue d'ensemble
 
 **Lab on Demand** est une plateforme complète pour la gestion et l'exécution de Travaux Pratiques (TPs) en environnement virtualisé. Elle permet aux enseignants de créer des TPs et aux étudiants de les exécuter dans un environnement sécurisé et isolé.
@@ -236,6 +236,7 @@ Consultez les fichiers dans le dossier `docs/` pour plus de détails:
 
 **Dernière mise à jour**: 16 janvier 2026
 # last-version
+
 
 
 
